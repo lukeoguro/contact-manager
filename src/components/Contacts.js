@@ -1,8 +1,9 @@
-function Contacts({ contactsToShow }) {
+function Contacts({ contactsToShow, handleContactDelete }) {
   return (
-    contactsToShow.map(contact => (
-      <p key={contact.id}>
-        {contact.name} {contact.number}
+    contactsToShow.map(({ id, name, number }) => (
+      <p key={id}>
+        {name} {number}
+        <button onClick={() => handleContactDelete({ id, name })}>Delete</button>
       </p>
     ))
   )
