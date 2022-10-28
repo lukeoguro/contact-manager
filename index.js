@@ -1,6 +1,12 @@
 import express from 'express';
+import morgan from 'morgan';
+
 const app = express();
+
 app.use(express.json());
+
+morgan.token('reqBody', (req, _) => JSON.stringify(req.body));
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :reqBody'));
 
 let contacts = [
   {
@@ -43,7 +49,7 @@ app.get('/api/contacts/:id', (req, res) => {
   if (contact) {
     res.json(contact);
   } else {
-    res.status(404).send();
+    res.status(404).json({ error: "contact not found" });
   }
 });
 
