@@ -16,31 +16,29 @@ morgan.token('reqBody', (req, _) => JSON.stringify(req.body));
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :reqBody'));
 
 app.get('/info', (_, res) => {
-  res.send(`
+  Contact.find({}).then(contacts => {
+    res.send(`
     <p>Contact manager has info for ${contacts.length} contacts</p>
     <p>${new Date().toString()}</p>
   `);
+  });
 });
 
 app.get('/api/contacts', (_, res) => {
   Contact.find({}).then(contacts => res.json(contacts));
 });
 
-app.get('/api/contacts/:id', (req, res) => {
-  const id = Number(req.params.id);
-  const contact = contacts.find(contact => contact.id === id);
-
-  if (contact) {
-    res.json(contact);
-  } else {
-    res.status(404).json({ error: "contact not found" });
-  }
+app.get('/api/contacts/:id', (req, res, next) => {
+  Note.findById(req.params.id)
+    .then(note => {
+      if (note) {
+        res.json(note);
+      } else {
+        res.status(404).json({ error: "contact not found" });
+      }
+    })
+    .catch(err => next(err));
 });
-
-function generateId() {
-  const maxId = contacts.length > 0 ? Math.max(...contacts.map(n => n.id)) : 0;
-  return maxId + 1;
-}
 
 app.post('/api/contacts', (req, res) => {
   const body = req.body;
@@ -59,12 +57,46 @@ app.post('/api/contacts', (req, res) => {
   });
 });
 
-app.delete('/api/contacts/:id', (req, res) => {
-  const id = Number(req.params.id);
-  contacts = contacts.filter(contact => contact.id !== id);
+app.put('/api/contacts/:id', (req, res, next) => {
+  const body = req.body;
 
-  res.status(204).end();
+  const contact = {
+    name: body.name,
+    number: body.number,
+  }
+
+  Contact.findByIdAndUpdate(req.params.id, contact, { new: true })
+    .then(updatedContact => {
+      res.json(updatedContact);
+    })
+    .catch(err => next(err));
 });
+
+app.delete('/api/contacts/:id', (req, res, next) => {
+  Contact.findByIdAndRemove(req.params.id)
+    .then(() => {
+      res.status(204).end()
+    })
+    .catch(err => next(err));
+});
+
+const unknownEndpoint = (_, res) => {
+  res.status(404).json({ error: 'unknown endpoint' });
+}
+
+app.use(unknownEndpoint);
+
+const errorHandler = (err, _, res, next) => {
+  console.error(err.message)
+
+  if (err.name === 'CastError') {
+    return res.status(400).send({ error: 'malformed id' });
+  }
+
+  next(err);
+}
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
