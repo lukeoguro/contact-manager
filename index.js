@@ -29,32 +29,34 @@ app.get('/api/contacts', (_, res) => {
 });
 
 app.get('/api/contacts/:id', (req, res, next) => {
-  Note.findById(req.params.id)
-    .then(note => {
-      if (note) {
-        res.json(note);
+  Contact.findById(req.params.id)
+    .then(contact => {
+      if (contact) {
+        res.json(contact);
       } else {
-        res.status(404).json({ error: "contact not found" });
+        res.status(404).json({ error: "Contact not found" });
       }
     })
     .catch(err => next(err));
 });
 
-app.post('/api/contacts', (req, res) => {
-  const body = req.body;
+app.post('/api/contacts', async (req, res, next) => {
+  const { name, number } = req.body;
 
-  if (!body.name || !body.number) {
-    return res.status(400).json({ error: "'name' or 'number' is missing" });
-  }
-
-  const contact = new Contact({
-    name: body.name,
-    number: body.number,
+  const existingContact = await Contact.findOne({
+    name: { $regex: new RegExp(`^${name}$`, "i") }
   });
+  if (existingContact) {
+    return res.status(400).json({ error: "Contact exists" });
+  };
 
-  contact.save().then(savedContact => {
+  try {
+    const contact = new Contact({ name, number });
+    const savedContact = await contact.save();
     res.json(savedContact);
-  });
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.put('/api/contacts/:id', (req, res, next) => {
@@ -65,9 +67,17 @@ app.put('/api/contacts/:id', (req, res, next) => {
     number: body.number,
   }
 
-  Contact.findByIdAndUpdate(req.params.id, contact, { new: true })
+  Contact.findByIdAndUpdate(
+    req.params.id,
+    contact,
+    { new: true, runValidators: true, context: 'query' }
+  )
     .then(updatedContact => {
-      res.json(updatedContact);
+      if (updatedContact) {
+        res.json(updatedContact);
+      } else {
+        res.status(404).json({ error: "Contact not found" });
+      }
     })
     .catch(err => next(err));
 });
@@ -81,7 +91,7 @@ app.delete('/api/contacts/:id', (req, res, next) => {
 });
 
 const unknownEndpoint = (_, res) => {
-  res.status(404).json({ error: 'unknown endpoint' });
+  res.status(404).json({ error: 'Unknown endpoint' });
 }
 
 app.use(unknownEndpoint);
@@ -90,7 +100,9 @@ const errorHandler = (err, _, res, next) => {
   console.error(err.message)
 
   if (err.name === 'CastError') {
-    return res.status(400).send({ error: 'malformed id' });
+    return res.status(400).send({ error: 'Malformed id' });
+  } else if (err.name === 'ValidationError') {
+    return res.status(400).json({ error: err.message });
   }
 
   next(err);

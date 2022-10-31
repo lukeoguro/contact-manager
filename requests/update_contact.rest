@@ -5,3 +5,12 @@ Content-Type: application/json
   "name": "Updated name",
   "number": "123-456-789"
 }
+
+###
+PUT http://localhost:3001/api/contacts/635f67e041995d3d61f4451c
+Content-Type: application/json
+
+{
+  "name": "updated",
+  "number": "124-12304123123"
+}
