@@ -69,20 +69,25 @@ const App = () => {
             setNumber('');
             showSuccessMessage(`Updated '${returnedContact.name}'`);
           })
-          .catch(() => {
-            showErrorMessage(`'${existingContact.name}' has been deleted and can't be updated`);
-            setContacts(contacts.filter(c => c.id !== existingContact.id));
+          .catch((err) => {
+            // showErrorMessage(`'${existingContact.name}' has been deleted and can't be updated`);
+            // setContacts(contacts.filter(c => c.id !== existingContact.id));
+            showErrorMessage(err.response.data.error);
           });
       }
     } else {
       const newContact = { name, number };
 
-      contactService.create(newContact).then(returnedContact => {
-        setContacts(contacts.concat(returnedContact));
-        setName('');
-        setNumber('');
-        showSuccessMessage(`Added '${returnedContact.name}'`);
-      });
+      contactService.create(newContact)
+        .then(returnedContact => {
+          setContacts(contacts.concat(returnedContact));
+          setName('');
+          setNumber('');
+          showSuccessMessage(`Added '${returnedContact.name}'`);
+        })
+        .catch(err => {
+          showErrorMessage(err.response.data.error);
+        });
     }
   }
 
